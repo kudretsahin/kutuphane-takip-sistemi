@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kütüphane Öğrenci Takip Sistemi</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📚</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 16px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                Kütüphane Öğrenci Takip Sistemi
+            </h1>
+            <p class="text-gray-600">Kimlik okutarak giriş-çıkış takibi</p>
+        </div>
+
+        <!-- Kimlik Okutma Paneli -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Kimlik Okutma</h2>
+            
+            <!-- Kütüphane Seçimi -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Kütüphane Seçin:
+                </label>
+                <select id="librarySelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="ana">Ana Kütüphane</option>
+                    <option value="fen">Fen Bilimleri Kütüphanesi</option>
+                    <option value="sosyal">Sosyal Bilimler Kütüphanesi</option>
+                    <option value="dil">Dil ve Edebiyat Kütüphanesi</option>
+                    <option value="matematik">Matematik Kütüphanesi</option>
+                    <option value="sanat">Sanat ve Tasarım Kütüphanesi</option>
+                </select>
+            </div>
+            
+            <div class="flex gap-4">
+                <input
+                    type="text"
+                    id="studentId"
+                    placeholder="TC Kimlik Numarası (11 hane)"
+                    class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    maxlength="11"
+                />
+                <button
+                    onclick="processIdCard()"
+                    class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                >
+                    OKUT
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-2">
+                Test için: 12345678901, 12345678902, 12345678903, 12345678904, 12345678905
+            </p>
+            <p id="selectedLibrary" class="text-sm text-blue-600 font-medium mt-1">
+                Seçili Kütüphane: Ana Kütüphane
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Şu An İçerideki Öğrenciler -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        İçerideki Öğrenciler (<span id="insideCount">0</span>)
+                    </h2>
+                    <svg class="text-green-500" width="24" height="24" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"/>
+                    </svg>
+                </div>
+                
+                <div class="mb-4">
+                    <input
+                        type="text"
+                        id="searchStudents"
+                        placeholder="Öğrenci ara..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        oninput="filterStudents()"
+                    />
+                </div>
+
+                <div id="studentsList" class="space-y-3 max-h-96 overflow-y-auto">
+                    <div class="text-center py-8 text-gray-500">Şu an içeride öğrenci yok</div>
+                </div>
+            </div>
+
+            <!-- Molada Olan Öğrenciler -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        Molada Olanlar (<span id="breakCount">0</span>)
+                    </h2>
+                    <svg class="text-yellow-500" width="24" height="24" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
+                    </svg>
+                </div>
+
+                <div id="breakList" class="space-y-3 max-h-96 overflow-y-auto">
+                    <div class="text-center py-8 text-gray-500">Molada öğrenci yok</div>
+                </div>
+            </div>
+
+            <!-- Son İşlemler -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-gray-800">Son İşlemler</h2>
+                    <svg class="text-blue-500" width="24" height="24" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
+                    </svg>
+                </div>
+
+                <div id="logsList" class="space-y-3 max-h-96 overflow-y-auto">
+                    <div class="text-center py-8 text-gray-500">Henüz işlem kaydı yok</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- İstatistikler -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
+            <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                <div id="stat-inside" class="text-3xl font-bold text-green-600 mb-2">0</div>
+                <div class="text-gray-600">Şu An İçeride</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                <div id="stat-break" class="text-3xl font-bold text-yellow-600 mb-2">0</div>
+                <div class="text-gray-600">Molada</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                <div id="stat-entries" class="text-3xl font-bold text-blue-600 mb-2">0</div>
+                <div class="text-gray-600">Toplam Giriş</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                <div id="stat-exits" class="text-3xl font-bold text-orange-600 mb-2">0</div>
+                <div class="text-gray-600">Toplam Çıkış</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global değişkenler
+        let studentsInside = [];
+        let studentsOnBreak = [];
+        let allLogs = [];
+        
+        // Kütüphane listesi
+        const libraries = {
+            'ana': 'Ana Kütüphane',
+            'fen': 'Fen Bilimleri Kütüphanesi',
+            'sosyal': 'Sosyal Bilimler Kütüphanesi',
+            'dil': 'Dil ve Edebiyat Kütüphanesi',
+            'matematik': 'Matematik Kütüphanesi',
+            'sanat': 'Sanat ve Tasarım Kütüphanesi'
+        };
+        
+        // Örnek öğrenci veritabanı
+        const studentDatabase = {
+            '12345678901': { name: 'Ahmet Yılmaz', class: '12-A' },
+            '12345678902': { name: 'Ayşe Demir', class: '11-B' },
+            '12345678903': { name: 'Mehmet Kaya', class: '10-C' },
+            '12345678904': { name: 'Fatma Özkan', class: '12-B' },
+            '12345678905': { name: 'Ali Çelik', class: '11-A' },
+        };
+
+        // Süre hesaplama fonksiyonu
+        function calculateDuration(startTime) {
+            const now = new Date();
+            const start = new Date(startTime);
+            const diffMs = now - start;
+            const diffMinutes = Math.floor(diffMs / 60000);
+            const hours = Math.floor(diffMinutes / 60);
+            const minutes = diffMinutes % 60;
+            
+            if (hours > 0) {
+                return `${hours}s ${minutes}dk`;
+            } else {
+                return `${minutes < 1 ? '0' : minutes}dk`;
+            }
+        }
+
+        // Kütüphane seçimi değiştiğinde
+        document.getElementById('librarySelect').addEventListener('change', function() {
+            const selectedLib = libraries[this.value];
+            document.getElementById('selectedLibrary').textContent = 'Seçili Kütüphane: ' + selectedLib;
+        });
+
+        // Enter tuşu ile kimlik okutma
+        document.getElementById('studentId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                processIdCard();
+            }
+        });
+
+        // Kimlik okutma fonksiyonu
+        function processIdCard() {
+            const studentId = document.getElementById('studentId').value.trim();
+            const selectedLibrary = document.getElementById('librarySelect').value;
+            
+            if (!studentId || studentId.length !== 11) {
+                alert('Geçerli 11 haneli TC kimlik numarası giriniz!');
+                return;
+            }
+
+            const studentInfo = studentDatabase[studentId];
+            if (!studentInfo) {
+                alert('Öğrenci kaydı bulunamadı!');
+                document.getElementById('studentId').value = '';
+                return;
+            }
+
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('tr-TR');
+            const dateString = now.toLocaleDateString('tr-TR');
+
+            // Öğrenci durumu kontrolü
+            const studentIndex = studentsInside.findIndex(s => s.id === studentId);
+            const breakIndex = studentsOnBreak.findIndex(s => s.id === studentId);
+            
+            if (studentIndex !== -1) {
+                // Çıkış işlemi
+                studentsInside.splice(studentIndex, 1);
+                addLog(studentId, studentInfo, 'ÇIKIŞ', timeString, dateString, selectedLibrary);
+                showNotification(`${studentInfo.name} - ÇIKIŞ`, 'orange');
+            } else if (breakIndex !== -1) {
+                // Moladan dönüş
+                studentsOnBreak.splice(breakIndex, 1);
+                studentsInside.push({
+                    id: studentId,
+                    name: studentInfo.name,
+                    class: studentInfo.class,
+                    library: selectedLibrary,
+                    entryTime: timeString,
+                    entryDate: dateString,
+                    entryTimestamp: now
+                });
+                addLog(studentId, studentInfo, 'MOLA DÖN', timeString, dateString, selectedLibrary);
+                showNotification(`${studentInfo.name} - MOLA DÖN`, 'green');
+            } else {
+                // Giriş işlemi
+                studentsInside.push({
+                    id: studentId,
+                    name: studentInfo.name,
+                    class: studentInfo.class,
+                    library: selectedLibrary,
+                    entryTime: timeString,
+                    entryDate: dateString,
+                    entryTimestamp: now
+                });
+                addLog(studentId, studentInfo, 'GİRİŞ', timeString, dateString, selectedLibrary);
+                showNotification(`${studentInfo.name} - GİRİŞ`, 'green');
+            }
+
+            updateDisplay();
+            document.getElementById('studentId').value = '';
+        }
+
+        // Mola verme fonksiyonu
+        function takeBreak(studentId) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('tr-TR');
+            const dateString = now.toLocaleDateString('tr-TR');
+            
+            const studentIndex = studentsInside.findIndex(s => s.id === studentId);
+            if (studentIndex === -1) return;
+
+            const student = studentsInside[studentIndex];
+            
+            // Öğrenciyi içeridekilerden çıkar, molaya al
+            studentsInside.splice(studentIndex, 1);
+            studentsOnBreak.push({
+                ...student,
+                breakTime: timeString,
+                breakDate: dateString,
+                breakTimestamp: now
+            });
+
+            addLog(studentId, student, 'MOLA VER', timeString, dateString, student.library);
+            showNotification(`${student.name} - MOLA VER`, 'yellow');
+            updateDisplay();
+        }
+
+        // Log ekleme
+        function addLog(id, studentInfo, action, time, date, library) {
+            allLogs.unshift({
+                id: id,
+                name: studentInfo.name,
+                class: studentInfo.class,
+                library: libraries[library],
+                action: action,
+                time: time,
+                date: date,
+                timestamp: new Date()
+            });
+        }
+
+        // Bildirim gösterme
+        function showNotification(message, color) {
+            // Eski bildirimleri kaldır
+            const oldNotifications = document.querySelectorAll('.notification');
+            oldNotifications.forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            
+            const colors = {
+                'green': '#10b981',
+                'orange': '#f59e0b',
+                'yellow': '#eab308'
+            };
+            
+            notification.style.backgroundColor = colors[color] || '#10b981';
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Ekranı güncelleme
+        function updateDisplay() {
+            updateStudentsList();
+            updateBreakList();
+            updateLogsList();
+            updateStats();
+        }
+
+        // İçerideki öğrenciler listesi
+        function updateStudentsList() {
+            const container = document.getElementById('studentsList');
+            const searchTerm = document.getElementById('searchStudents').value.toLowerCase();
+            
+            const filteredStudents = studentsInside.filter(student =>
+                student.name.toLowerCase().includes(searchTerm) ||
+                student.id.includes(searchTerm) ||
+                student.class.toLowerCase().includes(searchTerm)
+            );
+
+            if (filteredStudents.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-gray-500">
+                    ${studentsInside.length === 0 ? 'Şu an içeride öğrenci yok' : 'Arama sonucu bulunamadı'}
+                </div>`;
+            } else {
+                container.innerHTML = filteredStudents.map(student => `
+                    <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200 fade-in">
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-800">${student.name}</div>
+                            <div class="text-sm text-gray-600">${student.class} • ${student.id}</div>
+                            <div class="text-sm text-blue-600 font-medium">📍 ${libraries[student.library]}</div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right">
+                                <div class="text-sm text-gray-500">Giriş</div>
+                                <div class="text-sm font-medium">${student.entryTime}</div>
+                                <div class="text-xs text-green-600 font-bold">⏱️ ${calculateDuration(student.entryTimestamp)}</div>
+                            </div>
+                            <button onclick="takeBreak('${student.id}')" class="px-3 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600 transition-colors">
+                                MOLA
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('insideCount').textContent = studentsInside.length;
+        }
+
+        // Molada olanlar listesi
+        function updateBreakList() {
+            const container = document.getElementById('breakList');
+
+            if (studentsOnBreak.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-500">Molada öğrenci yok</div>';
+            } else {
+                container.innerHTML = studentsOnBreak.map(student => `
+                    <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200 fade-in">
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-800">${student.name}</div>
+                            <div class="text-sm text-gray-600">${student.class} • ${student.id}</div>
+                            <div class="text-sm text-blue-600 font-medium">📍 ${libraries[student.library]}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500">Mola Başlangıcı</div>
+                            <div class="text-sm font-medium">${student.breakTime}</div>
+                            <div class="text-xs text-yellow-600 font-bold">⏱️ ${calculateDuration(student.breakTimestamp)} molada</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('breakCount').textContent = studentsOnBreak.length;
+        }
+
+        // İşlemler listesi
+        function updateLogsList() {
+            const container = document.getElementById('logsList');
+            const recentLogs = allLogs.slice(0, 50);
+
+            if (recentLogs.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-500">Henüz işlem kaydı yok</div>';
+            } else {
+                container.innerHTML = recentLogs.map(log => `
+                    <div class="flex items-center justify-between p-3 rounded-lg border fade-in ${getLogColor(log.action)}">
+                        <div class="flex items-center gap-3 flex-1">
+                            ${getLogIcon(log.action)}
+                            <div class="flex-1">
+                                <div class="font-semibold text-gray-800">${log.name}</div>
+                                <div class="text-sm text-gray-600">${log.class} • ${log.id}</div>
+                                <div class="text-xs text-blue-600 font-medium">📍 ${log.library}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium ${getLogTextColor(log.action)}">${log.action}</div>
+                            <div class="text-xs text-gray-500">${log.time} - ${log.date}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Log renk ve ikon fonksiyonları
+        function getLogColor(action) {
+            const colors = {
+                'GİRİŞ': 'bg-blue-50 border-blue-200',
+                'ÇIKIŞ': 'bg-orange-50 border-orange-200',
+                'MOLA VER': 'bg-yellow-50 border-yellow-200',
+                'MOLA DÖN': 'bg-green-50 border-green-200'
+            };
+            return colors[action] || 'bg-gray-50 border-gray-200';
+        }
+
+        function getLogIcon(action) {
+            const icons = {
+                'GİRİŞ': '<svg class="text-blue-500" width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                'ÇIKIŞ': '<svg class="text-orange-500" width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>',
+                'MOLA VER': '<svg class="text-yellow-500" width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>',
+                'MOLA DÖN': '<svg class="text-green-500" width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+            };
+            return icons[action] || '';
+        }
+
+        function getLogTextColor(action) {
+            const colors = {
+                'GİRİŞ': 'text-blue-600',
+                'ÇIKIŞ': 'text-orange-600',
+                'MOLA VER': 'text-yellow-600',
+                'MOLA DÖN': 'text-green-600'
+            };
+            return colors[action] || 'text-gray-600';
+        }
+
+        // İstatistikleri güncelleme
+        function updateStats() {
+            document.getElementById('stat-inside').textContent = studentsInside.length;
+            document.getElementById('stat-break').textContent = studentsOnBreak.length;
+            document.getElementById('stat-entries').textContent = allLogs.filter(log => log.action === 'GİRİŞ').length;
+            document.getElementById('stat-exits').textContent = allLogs.filter(log => log.action === 'ÇIKIŞ').length;
+        }
+
+        // Arama filtreleme
+        function filterStudents() {
+            updateStudentsList();
+        }
+
+        // Süreyi güncelle (her dakika)
+        setInterval(() => {
+            updateStudentsList();
+            updateBreakList();
+        }, 60000);
+
+        // Sayfa yüklendiğinde başlat
+        updateDisplay();
+    </script>
+</body>
+</html>
